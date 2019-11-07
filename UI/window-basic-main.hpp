@@ -86,12 +86,15 @@ struct QuickTransition {
 	obs_hotkey_id hotkey = OBS_INVALID_HOTKEY_ID;
 	int duration = 0;
 	int id = 0;
+	bool fadeToBlack = false;
 
 	inline QuickTransition() {}
-	inline QuickTransition(OBSSource source_, int duration_, int id_)
+	inline QuickTransition(OBSSource source_, int duration_, int id_,
+			       bool fadeToBlack_ = false)
 		: source(source_),
 		  duration(duration_),
 		  id(id_),
+		  fadeToBlack(fadeToBlack_),
 		  renamedSignal(std::make_shared<OBSSignal>(
 			  obs_source_get_signal_handler(source), "rename",
 			  SourceRenamed, this))
@@ -153,7 +156,6 @@ private:
 	long disableSaving = 1;
 	bool projectChanged = false;
 	bool previewEnabled = true;
-	bool fullscreenInterface = false;
 
 	const char *copyString;
 	const char *copyFiltersString = nullptr;
@@ -386,6 +388,7 @@ private:
 	volatile bool previewProgramMode = false;
 	obs_hotkey_id togglePreviewProgramHotkey = 0;
 	obs_hotkey_id transitionHotkey = 0;
+	obs_hotkey_id statsHotkey = 0;
 	int quickTransitionIdCounter = 1;
 	bool overridingTransition = false;
 
@@ -477,7 +480,8 @@ public slots:
 			       bool direct = false);
 	void TransitionToScene(OBSSource scene, bool force = false,
 			       bool direct = false,
-			       bool quickTransition = false);
+			       bool quickTransition = false,
+			       bool black = false);
 	void SetCurrentScene(OBSSource scene, bool force = false,
 			     bool direct = false);
 
@@ -560,6 +564,11 @@ private slots:
 
 	void CheckDiskSpaceRemaining();
 
+	void ScenesReordered(const QModelIndex &parent, int start, int end,
+			     const QModelIndex &destination, int row);
+
+	void ResetStatsHotkey();
+
 private:
 	/* OBS Callbacks */
 	static void SceneReordered(void *data, calldata_t *params);
@@ -590,6 +599,8 @@ private:
 
 	bool LowDiskSpace();
 	void DiskSpaceMessage();
+
+	OBSSource prevFTBSource = nullptr;
 
 public:
 	OBSSource GetProgramSource();
@@ -680,6 +691,8 @@ public:
 	QAction *AddDockWidget(QDockWidget *dock);
 
 	static OBSBasic *Get();
+
+	const char *GetCurrentOutputPath();
 
 protected:
 	virtual void closeEvent(QCloseEvent *event) override;
@@ -783,6 +796,7 @@ private slots:
 	void on_transitionAdd_clicked();
 	void on_transitionRemove_clicked();
 	void on_transitionProps_clicked();
+	void on_transitionDuration_valueChanged(int value);
 
 	void on_modeSwitch_clicked();
 
